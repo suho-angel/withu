@@ -1,5 +1,9 @@
 name: CI
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [ main ]
@@ -82,22 +86,39 @@ jobs:
         run: |
           echo 'CI pipeline completed successfully.'
 
-  # Optional job to build image only (extend later for push to registry)
   docker-image:
     if: github.ref == 'refs/heads/main'
     needs: build-and-test
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: withu
+      REGISTRY: ghcr.io/suho-angel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build Image
-        run: docker build -t withu:latest .
-      # - name: Login & Push (uncomment when registry ready)
-      #   env:
-      #     REGISTRY: ghcr.io/<owner>
-      #     IMAGE_NAME: withu
-      #     CR_PAT: ${{ secrets.GHCR_TOKEN }}
-      #   run: |
-      #     echo "$CR_PAT" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      #     docker tag withu:latest ghcr.io/<owner>/withu:latest
-      #     docker push ghcr.io/<owner>/withu:latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/suho-angel/withu:latest
+            ghcr.io/suho-angel/withu:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image tags
+        run: |
+          echo "Published: ghcr.io/suho-angel/withu:latest"
+          echo "Published: ghcr.io/suho-angel/withu:${GITHUB_SHA}"
