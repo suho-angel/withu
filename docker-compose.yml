@@ -1,0 +1,39 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: withu-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: withu
+      MYSQL_USER: withu
+      MYSQL_PASSWORD: withu_pass
+    ports:
+      - "3307:3306"  # 외부 포트 3307 -> 컨테이너 3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  web:
+    build: .
+    container_name: withu-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: withu
+      MYSQL_USER: withu
+      MYSQL_PASSWORD: withu_pass
+      FLASK_ENV: development
+      GUNICORN_WORKERS: 3
+      GUNICORN_THREADS: 2
+      GUNICORN_TIMEOUT: 60
+    depends_on:
+      - mysql
+    ports:
+      - "18888:5000"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:

@@ -1,0 +1,85 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+wheels/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+htmlcov/
+
+# Type checker / linters
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+ruff_cache/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# VS Code / IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+
+# Environment & secrets
+.env
+*.env.local
+.env.*.bak
+
+# Logs
+*.log
+logs/
+
+# Docker / compose runtime artifacts
+*.pid
+
+# Flask / gunicorn runtime
+instance/
+
+# SQLAlchemy migrations cache (if using alembic autogenerate temp)
+*.bak
+
+# Ignore generated test flow tmp token files (not stored here but future-proof)
+/tmp/
+
+# If later you add front-end
+node_modules/
+
+# Coverage reports alternate extensions
+*.cover
+
+# pyproject build helpers
+poetry.lock
+
+# Security scans reports
+report-*.json
+
+# Backup files
+*~
