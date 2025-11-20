@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_pass
+          MYSQL_DATABASE: withu
+          MYSQL_USER: withu
+          MYSQL_PASSWORD: withu_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot_pass" --health-interval=10s --health-timeout=5s --health-retries=5
+    env:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: withu
+      MYSQL_USER: withu
+      MYSQL_PASSWORD: withu_pass
+      FLASK_ENV: development
+      FLASK_DEBUG: 0
+      PYTHONUNBUFFERED: 1
+      # Secrets (define in repo settings → Actions → Secrets):
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_USE_TLS: 1
+      MAIL_FROM: ${{ secrets.SMTP_USER }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..20}; do
+            if mysql -h mysql -uwithu -pwithu_pass -e 'SELECT 1;' >/dev/null 2>&1; then echo 'MySQL up'; break; fi
+            echo 'Waiting MySQL...'; sleep 3;
+          done
+
+      - name: Initialize & Smoke Test
+        run: |
+          python run.py &
+          APP_PID=$!
+          # Wait for Flask port
+          for i in {1..30}; do
+            if curl -s http://localhost:5000/health | grep -q '"status":'; then echo 'Health OK'; break; fi
+            echo 'Waiting app...'; sleep 2;
+          done
+          curl -s http://localhost:5000/health
+          kill $APP_PID || true
+
+      - name: Docker Build
+        run: |
+          docker build -t withu:ci .
+
+      - name: Summary
+        run: |
+          echo 'CI pipeline completed successfully.'
+
+  # Optional job to build image only (extend later for push to registry)
+  docker-image:
+    if: github.ref == 'refs/heads/main'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Image
+        run: docker build -t withu:latest .
+      # - name: Login & Push (uncomment when registry ready)
+      #   env:
+      #     REGISTRY: ghcr.io/<owner>
+      #     IMAGE_NAME: withu
+      #     CR_PAT: ${{ secrets.GHCR_TOKEN }}
+      #   run: |
+      #     echo "$CR_PAT" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      #     docker tag withu:latest ghcr.io/<owner>/withu:latest
+      #     docker push ghcr.io/<owner>/withu:latest
